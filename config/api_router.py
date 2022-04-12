@@ -1,11 +1,15 @@
-
 from django.conf import settings
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
-from course_api.typeform.api_views import FieldViewSet, FormViewSet, SubmissionViewSet, TestView
-
 from rest_framework_nested import routers
-from course_api.users.api.views import DecoratedTokenObtainPairView, DecoratedTokenRefreshView, UserViewSet
+from rest_framework_nested.routers import NestedSimpleRouter
+
+from course_api.tasks.views import BoardViewset, StatusViewset, TaskViewSet
+from course_api.users.api.views import (
+    DecoratedTokenObtainPairView,
+    DecoratedTokenRefreshView,
+    UserViewSet,
+)
 
 if settings.DEBUG:
     router = DefaultRouter()
@@ -14,23 +18,21 @@ else:
 
 router.register("users", UserViewSet)
 
+router.register("status" , StatusViewset)
+router.register("boards" , BoardViewset)
+
+board_nested_router = NestedSimpleRouter(router, r"boards", lookup="boards")
+
+board_nested_router.register("tasks",TaskViewSet)
 
 app_name = "api"
 
-router.register(r'forms', FormViewSet)
-
-
-forms_router = routers.NestedSimpleRouter(router, r'forms', lookup='form')
-forms_router.register(r'fields', FieldViewSet, basename='form-fields')
-forms_router.register(r'submission', SubmissionViewSet, basename='form-submission')
-
 urlpatterns = [
     # GET /api/test -> TestView.as_view()
-    path('mock_test/', TestView.as_view(actions={'get': 'mock_test'}), name='mock_test'),
-    path(r'auth/', include('rest_auth.urls')),
-    path(r'auth/registration/', include('rest_auth.registration.urls')),
-    path(r'', include(router.urls)),
-    path(r'', include(forms_router.urls)),
-    path('token/', DecoratedTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', DecoratedTokenRefreshView.as_view(), name='token_refresh'),
+    path(r"auth/", include("rest_auth.urls")),
+    path(r"auth/registration/", include("rest_auth.registration.urls")),
+    path(r"", include(router.urls)),
+    path(r"", include(board_nested_router.urls)),
+    path("token/", DecoratedTokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("token/refresh/", DecoratedTokenRefreshView.as_view(), name="token_refresh"),
 ]
